@@ -263,25 +263,31 @@
     }
   }
 
-  function sendMessage() {
-    const message = chatbotInput.value.trim();
-    if (!message) return;
-    appendMessage(message, true);
-    chatbotInput.value = "";
+    function sendMessage() {
+      const message = chatbotInput.value.trim();
+      if (!message) return;
+      appendMessage(message, true);
+      chatbotInput.value = "";
 
-    fetch("/chatbot/get-response/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCSRFToken(),
-      },
-      body: JSON.stringify({ message }),
-    })
+      // show typing
+      appendMessage("🤖 typing...", false, false);
+      const typingEl = chatbotMessages.lastChild.querySelector("div:last-child");
+
+      fetch("/chatbot/get-response/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCSRFToken(),
+        },
+        body: JSON.stringify({ message }),
+      })
       .then(res => res.json())
       .then(data => {
-        appendMessage(data.response, false);
+          typingEl.textContent = data.response;  // replace typing...
+          chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
       });
   }
+
 
   function getCSRFToken() {
     return document.cookie
