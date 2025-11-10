@@ -225,7 +225,9 @@
     history.forEach(({ text, isUser }) => {
       appendMessage(text, isUser, false);
     });
-    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    if (history.length > 0) {
+      chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    }
   }
 
   function appendMessage(text, isUser, save = true) {
@@ -293,6 +295,8 @@
     chatbotToggle.classList.add("hidden");
     localStorage.setItem("chatbotWindowOpen", true);
     chatbotInput.focus();
+
+    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
   }
 
   function closeChatbot() {
@@ -309,21 +313,20 @@
   window.addEventListener("load", () => {
     loadChatHistory();
 
-    const isOpen = localStorage.getItem("chatbotWindowOpen") === "true";
     const helperShown = sessionStorage.getItem("chatbotHelperShown") === "true";
+    const isOpen = localStorage.getItem("chatbotWindowOpen") === "true";
 
     if (!helperShown) {
       fetch("/chatbot/get-response/", { method: "GET" })
         .then(res => res.json())
         .then(data => {
-          openChatbot();
           appendMessage(data.response, false);
           sessionStorage.setItem("chatbotHelperShown", "true"); 
         });
-    } else if (isOpen) {
+    }
+    
+    if (isOpen) {
       openChatbot();
-    } else {
-      closeChatbot();
     }
   });
 
