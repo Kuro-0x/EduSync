@@ -180,7 +180,7 @@ if os.environ.get("RENDER") == "true":
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 #Security
-if not DEBUG:
+if os.environ.get("DEBUG") == "false":
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True
