@@ -30,7 +30,7 @@ VT_API_KEY = os.environ.get('VT_API_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 
 
-DEBUG = False
+# DEBUG = False
 RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 
 ALLOWED_HOSTS = [
@@ -176,6 +176,8 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+if os.environ.get("RENDER") == "true":
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 #Security
 if not DEBUG:
