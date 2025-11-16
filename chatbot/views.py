@@ -68,7 +68,7 @@ def get_ai_response(chat_history):
     }
 
     payload = {
-        "model": "openai/gpt-4o-mini",   # RECOMMENDED MODEL
+        "model": "openai/gpt-oss-20b:free",  
         "messages": chat_history,
         "temperature": 0.7,
     }
