@@ -190,7 +190,7 @@
 </div>
 
 <script>
- 
+  /* ------------------ NAVBAR & DROPDOWN ------------------ */
   const toggleBtn = document.getElementById("mobile-menu-toggle");
   const mobileMenu = document.getElementById("mobile-menu");
   toggleBtn.addEventListener("click", () => {
@@ -211,6 +211,7 @@
     }
   });
 
+  /* ------------------ CHATBOT SETUP ------------------ */
   const chatbotToggle = document.getElementById("chatbot-toggle");
   const chatbotWindow = document.getElementById("chatbot-window");
   const chatbotSend = document.getElementById("chatbot-send");
@@ -218,16 +219,17 @@
   const chatbotMessages = document.getElementById("chatbot-messages");
   const chatbotClose = document.getElementById("chatbot-close");
 
+  /* ---------- Helper Functions ---------- */
+  function getCSRFToken() {
+    return document.cookie.split("; ").find(row => row.startsWith("csrftoken="))?.split("=")[1];
+  }
 
-  function loadChatHistory() {
-    const history = JSON.parse(localStorage.getItem("chatbotHistory") || "[]");
-    chatbotMessages.innerHTML = "";
-    history.forEach(({ text, isUser }) => {
-      appendMessage(text, isUser, false);
-    });
-    if (history.length > 0) {
-      chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-    }
+  function formatText(text) {
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
+      .replace(/\*(.*?)\*/g, "<i>$1</i>")
+      .replace(/`(.*?)`/g, "<code>$1</code>")
+      .replace(/\n/g, "<br>");
   }
 
   function appendMessage(text, isUser, save = true) {
@@ -236,19 +238,17 @@
 
     const bubble = document.createElement("div");
     bubble.className = `
-      max-w-[80%] px-4 py-2 rounded-lg shadow
-      ${isUser
-        ? "bg-indigo-100 text-indigo-800 text-right"
-        : "bg-white text-gray-800 border border-gray-200 text-left"}
+      max-w-[80%] px-4 py-2 rounded-lg shadow-sm
+      ${isUser ? "bg-indigo-100 text-indigo-800" : "bg-white text-gray-800 border border-gray-200"}
     `;
 
     const label = document.createElement("div");
-    label.className = "text-xs font-semibold mb-1";
-    label.textContent = isUser ? "You" : "Bot";
+    label.className = "text-xs font-semibold mb-1 opacity-70";
+    label.textContent = isUser ? "You" : "EduSync Bot 🤖";
 
     const msgText = document.createElement("div");
     msgText.className = "whitespace-pre-wrap break-words";
-    msgText.textContent = text;
+    msgText.innerHTML = formatText(text);
 
     bubble.appendChild(label);
     bubble.appendChild(msgText);
@@ -263,45 +263,49 @@
     }
   }
 
-    function sendMessage() {
-      const message = chatbotInput.value.trim();
-      if (!message) return;
-      appendMessage(message, true);
-      chatbotInput.value = "";
+  function loadChatHistory() {
+    const history = JSON.parse(localStorage.getItem("chatbotHistory") || "[]");
+    chatbotMessages.innerHTML = "";
+    history.forEach(({ text, isUser }) => appendMessage(text, isUser, false));
+    if (history.length > 0) chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+  }
 
-      // show typing
-      appendMessage("🤖 typing...", false, false);
-      const typingEl = chatbotMessages.lastChild.querySelector("div:last-child");
+  /* ---------- Message Handling ---------- */
+  function sendMessage() {
+    const message = chatbotInput.value.trim();
+    if (!message) return;
+    appendMessage(message, true);
+    chatbotInput.value = "";
 
-      fetch("/chatbot/get-response/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": getCSRFToken(),
-        },
-        body: JSON.stringify({ message }),
-      })
+    // Show typing indicator
+    const typing = document.createElement("div");
+    typing.className = "flex justify-start mb-2";
+    typing.innerHTML = `<div class='bg-gray-100 border border-gray-200 px-4 py-2 rounded-lg text-gray-500 animate-pulse'>Bot is typing...</div>`;
+    chatbotMessages.appendChild(typing);
+    chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+    fetch("/chatbot/get-response/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+      body: JSON.stringify({ message }),
+    })
       .then(res => res.json())
       .then(data => {
-          typingEl.textContent = data.response;  // replace typing...
-          chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        typing.remove();
+        appendMessage(data.response, false);
+      })
+      .catch(() => {
+        typing.remove();
+        appendMessage("⚠️ Sorry, something went wrong. Try again later.", false);
       });
   }
 
-
-  function getCSRFToken() {
-    return document.cookie
-      .split("; ")
-      .find(row => row.startsWith("csrftoken="))
-      ?.split("=")[1];
-  }
-
+  /* ---------- Chatbot Window Controls ---------- */
   function openChatbot() {
     chatbotWindow.classList.remove("hidden");
     chatbotToggle.classList.add("hidden");
     localStorage.setItem("chatbotWindowOpen", true);
     chatbotInput.focus();
-
     chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
   }
 
@@ -316,26 +320,26 @@
   chatbotSend.addEventListener("click", sendMessage);
   chatbotInput.addEventListener("keypress", e => { if (e.key === "Enter") sendMessage(); });
 
+  /* ---------- Initial Load ---------- */
   window.addEventListener("load", () => {
     loadChatHistory();
 
     const helperShown = sessionStorage.getItem("chatbotHelperShown") === "true";
-    const isOpen = localStorage.getItem("chatbotWindowOpen") === "true";
+    const isOpen = localStorage.getItem("chatbotWindowOpen") === "false";
 
     if (!helperShown) {
-      fetch("/chatbot/get-response/", { method: "GET" })
+      fetch("/chatbot/get-response/")
         .then(res => res.json())
         .then(data => {
           appendMessage(data.response, false);
-          sessionStorage.setItem("chatbotHelperShown", "true"); 
+          sessionStorage.setItem("chatbotHelperShown", "true");
         });
     }
-    
-    if (isOpen) {
-      openChatbot();
-    }
+
+    if (isOpen) openChatbot();
   });
 
+  /* ---------- Logout Cleanup ---------- */
   const logoutLink = document.getElementById("logout-link");
   if (logoutLink) {
     logoutLink.addEventListener("click", () => {
@@ -344,6 +348,7 @@
     });
   }
 
+  /* ---------- Auto Logout After Inactivity ---------- */
   let inactivityTimer;
   function resetInactivity() {
     clearTimeout(inactivityTimer);
@@ -354,7 +359,9 @@
       window.location.href = "{% url 'logout' %}";
     }, 15 * 60 * 1000);
   }
-  ["mousemove","keypress","click","touchstart"].forEach(evt => document.addEventListener(evt, resetInactivity));
+  ["mousemove", "keypress", "click", "touchstart"].forEach(evt =>
+    document.addEventListener(evt, resetInactivity)
+  );
   resetInactivity();
 </script>
 
